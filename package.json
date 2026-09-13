@@ -6,8 +6,11 @@
   "scripts": {
     "build": "tsc"
   },
-  "dependencies": {},
+  "dependencies": {
+    "prompt-sync": "^4.2.0"
+  },
   "devDependencies": {
+    "@types/prompt-sync": "^4.2.3",
     "typescript": "^6.0.3"
   },
   "private": true

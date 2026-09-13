@@ -1,0 +1,13 @@
+"use strict";
+let userName = "Diana";
+let age = 20;
+let isStudent = true;
+let information = "TypeScript";
+console.log(userName);
+console.log(age);
+console.log(isStudent);
+console.log(information);
+let names = ["Diana", "Anna", "Maria"];
+let numbers = [10, 20, 30];
+console.log(names);
+console.log(numbers);
