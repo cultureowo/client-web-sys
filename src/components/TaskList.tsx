@@ -1,13 +1,10 @@
 import { BookOpenCheck } from "lucide-react";
-import type { Task } from "../types/task";
 import { TaskItem } from "./TaskItem";
-import type { TaskActions } from "./TaskItem";
-export function TaskList({
-  tasks,
-  total,
-  onToggle,
-  onDelete,
-}: { tasks: Task[]; total: number } & TaskActions) {
+import { useTaskContext } from "../hooks/useTaskContext";
+import "./TaskList.scss";
+export function TaskList() {
+  const { visibleTasks: tasks, tasks: allTasks } = useTaskContext();
+  const total = allTasks.length;
   if (!tasks.length)
     return (
       <div className="empty">
@@ -25,12 +22,7 @@ export function TaskList({
   return (
     <ul className="task-list">
       {tasks.map((task) => (
-        <TaskItem
-          key={task.id}
-          task={task}
-          onToggle={onToggle}
-          onDelete={onDelete}
-        />
+        <TaskItem key={task.id} task={task} />
       ))}
     </ul>
   );

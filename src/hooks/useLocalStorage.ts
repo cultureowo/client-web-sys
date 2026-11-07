@@ -21,15 +21,21 @@ export function useLocalStorage<T>(
   fallback: T,
   validate: (value: unknown) => value is T,
 ) {
-  const [value, setValue] = useState<T>(() => readStoredValue(key, fallback, validate));
+  const [value, setValue] = useState<T>(() =>
+    readStoredValue(key, fallback, validate),
+  );
   const [error, setError] = useState("");
 
   useEffect(() => {
     try {
       localStorage.setItem(key, JSON.stringify(value));
+      // Reflect the result of synchronizing with the external storage API.
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       setError("");
     } catch {
-      setError("Сховище браузера недоступне. Налаштування збережені лише до перезавантаження.");
+      setError(
+        "Сховище браузера недоступне. Налаштування збережені лише до перезавантаження.",
+      );
     }
   }, [key, value]);
 

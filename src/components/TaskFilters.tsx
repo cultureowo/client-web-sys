@@ -1,25 +1,19 @@
 import { Search } from "lucide-react";
 import type { StatusFilter, SortOrder } from "../types/task";
-interface Props {
-  filter: StatusFilter;
-  onFilter: (filter: StatusFilter) => void;
-  search: string;
-  onSearch: (search: string) => void;
-  sort: SortOrder;
-  onSort: (sort: SortOrder) => void;
-  total: number;
-  completed: number;
-}
-export function TaskFilters({
-  filter,
-  onFilter,
-  search,
-  onSearch,
-  sort,
-  onSort,
-  total,
-  completed,
-}: Props) {
+import { useTaskContext } from "../hooks/useTaskContext";
+import "./TaskFilters.scss";
+export function TaskFilters() {
+  const {
+    filter,
+    setFilter: onFilter,
+    search,
+    setSearch: onSearch,
+    sort,
+    setSort: onSort,
+    tasks,
+    completed,
+  } = useTaskContext();
+  const total = tasks.length;
   const filters: { id: StatusFilter; label: string; count: number }[] = [
     { id: "all", label: "Усі", count: total },
     { id: "active", label: "Не виконані", count: total - completed },

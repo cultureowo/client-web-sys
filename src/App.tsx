@@ -1,3 +1,4 @@
+import "./App.scss";
 import { useState } from "react";
 import { Plus, Sparkles } from "lucide-react";
 import { Header } from "./components/Header";
@@ -5,42 +6,22 @@ import { TaskForm } from "./components/TaskForm";
 import { TaskStats } from "./components/TaskStats";
 import { TaskFilters } from "./components/TaskFilters";
 import { TaskList } from "./components/TaskList";
-import { initialTasks } from "./data/initialTasks";
-import type { Task, TaskDraft, StatusFilter, SortOrder } from "./types/task";
+import { useTaskContext } from "./hooks/useTaskContext";
+import { Toast } from "./components/Toast";
 import "./styles/app.scss";
 
 export default function App() {
-  const [tasks, setTasks] = useState<Task[]>(initialTasks);
-  const [filter, setFilter] = useState<StatusFilter>("all");
-  const [search, setSearch] = useState("");
-  const [sort, setSort] = useState<SortOrder>("default");
   const [dark, setDark] = useState(false);
-  const [notice, setNotice] = useState("");
-  const completed = tasks.filter((task) => task.completed).length;
-  const ranks = { high: 3, medium: 2, low: 1 };
-  const visibleTasks = tasks
-    .filter(
-      (task) =>
-        (filter === "all" || task.completed === (filter === "completed")) &&
-        task.title
-          .toLocaleLowerCase("uk")
-          .includes(search.trim().toLocaleLowerCase("uk")),
-    )
-    .sort((a, b) =>
-      sort === "default"
-        ? 0
-        : (ranks[b.priority] - ranks[a.priority]) * (sort === "high" ? 1 : -1),
-    );
-
-  function addTask(draft: TaskDraft) {
-    setTasks((previous) => [
-      { ...draft, id: crypto.randomUUID(), completed: false },
-      ...previous,
-    ]);
-    setFilter("all");
-    setSearch("");
-    setNotice("Завдання додано. Ще один крок до мети!");
-  }
+  const {
+    tasks,
+    completed,
+    visibleTasks,
+    editingTask,
+    clearCompleted,
+    resetTasks,
+    pending,
+    storageError,
+  } = useTaskContext();
 
   return (
     <div className={`planner${dark ? " planner--dark" : ""}`}>
@@ -68,10 +49,10 @@ export default function App() {
             <Plus size={19} /> Нове завдання
           </a>
         </section>
-        <TaskStats total={tasks.length} completed={completed} />
+        <TaskStats />
         <div className="planner__workspace">
           <aside>
-            <TaskForm onAdd={addTask} />
+            <TaskForm key={editingTask?.id ?? "new"} task={editingTask} />
             <div className="note">
               <Sparkles size={20} />
               <p>
@@ -89,57 +70,33 @@ export default function App() {
                   Мої завдання <span>{tasks.length}</span>
                 </h2>
               </div>
-              <button
-                className="button button--quiet"
-                disabled={!completed}
-                onClick={() => {
-                  setTasks((previous) =>
-                    previous.filter((task) => !task.completed),
-                  );
-                  setNotice("Виконані завдання очищено.");
-                }}
-              >
-                Очистити виконані
-              </button>
+              <div className="tasks__actions">
+                <button
+                  className="button button--quiet"
+                  disabled={!completed || !!pending}
+                  onClick={clearCompleted}
+                >
+                  Очистити виконані
+                </button>
+                <button className="button button--quiet" onClick={resetTasks}>
+                  Скинути дані
+                </button>
+              </div>
             </div>
-            <TaskFilters
-              filter={filter}
-              onFilter={setFilter}
-              search={search}
-              onSearch={setSearch}
-              sort={sort}
-              onSort={setSort}
-              total={tasks.length}
-              completed={completed}
-            />
-            <TaskList
-              tasks={visibleTasks}
-              total={tasks.length}
-              onToggle={(id) =>
-                setTasks((previous) =>
-                  previous.map((task) =>
-                    task.id === id
-                      ? { ...task, completed: !task.completed }
-                      : task,
-                  ),
-                )
-              }
-              onDelete={(id) => {
-                setTasks((previous) =>
-                  previous.filter((task) => task.id !== id),
-                );
-                setNotice("Завдання видалено.");
-              }}
-            />
+            <TaskFilters />
+            <TaskList />
             <p className="tasks__result">
               Показано {visibleTasks.length} із {tasks.length} завдань
             </p>
           </section>
         </div>
-        <p className="planner__notice" role="status">
-          {notice}
-        </p>
+        {storageError && (
+          <p className="planner__notice" role="alert">
+            {storageError}
+          </p>
+        )}
       </main>
+      <Toast />
       <footer className="planner__footer">
         <span>Study Planner ✦ Навчайся у своєму ритмі</span>
         <span>Кожен крок має значення.</span>

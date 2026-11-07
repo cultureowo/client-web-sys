@@ -1,27 +1,31 @@
 import type { CSSProperties } from "react";
-import { Trash2, Check, Flag } from "lucide-react";
+import { Trash2, Check, Flag, Pencil } from "lucide-react";
 import { priorityLabels } from "../types/task";
 import type { Task } from "../types/task";
-export interface TaskActions {
-  onToggle: (id: string) => void;
-  onDelete: (id: string) => void;
-}
-export function TaskItem({
-  task,
-  onToggle,
-  onDelete,
-}: { task: Task } & TaskActions) {
+import { useTaskContext } from "../hooks/useTaskContext";
+import "./TaskItem.scss";
+export function TaskItem({ task }: { task: Task }) {
+  const { toggleTask, requestDelete, startEditing, pending } = useTaskContext();
+  const deleting = pending?.ids.includes(task.id) ?? false;
   return (
-    <li className={`task${task.completed ? " task--completed" : ""}`}>
+    <li
+      className={`task${task.completed ? " task--completed" : ""}${deleting ? " task--pending" : ""}`}
+    >
       <input
         className="task__checkbox"
         type="checkbox"
         checked={task.completed}
-        onChange={() => onToggle(task.id)}
+        disabled={deleting}
+        onChange={() => toggleTask(task.id)}
         aria-label={`Виконано: ${task.title}`}
       />
       <div className="task__content">
         <h3>{task.title}</h3>
+        {deleting && (
+          <p className="task__pending" role="status">
+            Буде видалено…
+          </p>
+        )}
         {task.description && (
           <p className="task__description">{task.description}</p>
         )}
@@ -45,14 +49,26 @@ export function TaskItem({
           )}
         </div>
       </div>
-      <button
-        className="task__delete"
-        onClick={() => onDelete(task.id)}
-        aria-label={`Видалити: ${task.title}`}
-        title="Видалити завдання"
-      >
-        <Trash2 size={17} />
-      </button>
+      <div className="task__actions">
+        <button
+          className="task__edit"
+          disabled={deleting}
+          onClick={() => startEditing(task.id)}
+          aria-label={`Редагувати: ${task.title}`}
+          title="Редагувати завдання"
+        >
+          <Pencil size={17} />
+        </button>
+        <button
+          disabled={!!pending}
+          className="task__delete"
+          onClick={() => requestDelete(task.id)}
+          aria-label={`Видалити: ${task.title}`}
+          title="Видалити завдання"
+        >
+          <Trash2 size={17} />
+        </button>
+      </div>
     </li>
   );
 }

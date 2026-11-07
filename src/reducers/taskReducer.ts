@@ -46,15 +46,20 @@ export function taskReducer(state: TaskState, action: TaskAction): TaskState {
     case "requestDelete":
     case "clearCompleted":
       return state.pending ? state : { ...state, pending: action.pending };
-    case "confirmDelete":
+    case "confirmDelete": {
       if (state.pending?.token !== action.token) return state;
+      const ids = state.pending.ids;
       return {
-        tasks: state.tasks.filter((task) => !state.pending.ids.includes(task.id)),
+        tasks: state.tasks.filter((task) => !ids.includes(task.id)),
         pending: null,
       };
+    }
     case "undoDelete":
       return { ...state, pending: null };
     case "reset":
-      return { tasks: action.tasks.map((task) => ({ ...task })), pending: null };
+      return {
+        tasks: action.tasks.map((task) => ({ ...task })),
+        pending: null,
+      };
   }
 }

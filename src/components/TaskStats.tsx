@@ -1,11 +1,9 @@
 import { Layers, CircleCheck, Clock3, TrendingUp } from "lucide-react";
-export function TaskStats({
-  total,
-  completed,
-}: {
-  total: number;
-  completed: number;
-}) {
+import { useTaskContext } from "../hooks/useTaskContext";
+import "./TaskStats.scss";
+export function TaskStats() {
+  const { tasks, completed } = useTaskContext();
+  const total = tasks.length;
   const progress = total ? Math.round((completed / total) * 100) : 0;
   return (
     <section className="stats" aria-label="Статистика завдань">

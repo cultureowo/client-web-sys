@@ -2,27 +2,35 @@ import { useState } from "react";
 import type { SubmitEvent, CSSProperties } from "react";
 import { Plus, ArrowUpRight } from "lucide-react";
 import { categoryColors, priorityLabels } from "../types/task";
-import type { TaskDraft, Priority } from "../types/task";
-export function TaskForm({ onAdd }: { onAdd: (task: TaskDraft) => void }) {
-  const [title, setTitle] = useState("");
-  const [description, setDescription] = useState("");
-  const [category, setCategory] = useState("");
-  const [priority, setPriority] = useState<Priority>("medium");
-  const [color, setColor] = useState(categoryColors[0]);
+import type { Task, Priority } from "../types/task";
+import { useTaskContext } from "../hooks/useTaskContext";
+import "./TaskForm.scss";
+export function TaskForm({ task }: { task?: Task }) {
+  const { addTask, updateTask, cancelEditing, reportError } = useTaskContext();
+  const [title, setTitle] = useState(task?.title ?? "");
+  const [description, setDescription] = useState(task?.description ?? "");
+  const [category, setCategory] = useState(task?.category ?? "");
+  const [priority, setPriority] = useState<Priority>(
+    task?.priority ?? "medium",
+  );
+  const [color, setColor] = useState(task?.categoryColor ?? categoryColors[0]);
   const [error, setError] = useState("");
   function submit(event: SubmitEvent<HTMLFormElement>) {
     event.preventDefault();
     if (!title.trim()) {
       setError("Введи назву завдання — не лише пробіли.");
+      reportError("Не вдалося зберегти: введіть назву завдання.");
       return;
     }
-    onAdd({
+    const draft = {
       title: title.trim(),
       description: description.trim(),
       category: category.trim() || "Без категорії",
       priority,
       categoryColor: color,
-    });
+    };
+    const success = task ? updateTask(task.id, draft) : addTask(draft);
+    if (!success) return;
     setTitle("");
     setDescription("");
     setCategory("");
@@ -36,7 +44,7 @@ export function TaskForm({ onAdd }: { onAdd: (task: TaskDraft) => void }) {
         <span className="task-form__icon">
           <Plus size={21} />
         </span>
-        <h2>Нове завдання</h2>
+        <h2>{task ? "Редагувати завдання" : "Нове завдання"}</h2>
         <ArrowUpRight size={19} />
       </div>
       <p className="task-form__intro">З чого почнемо сьогодні?</p>
@@ -44,6 +52,7 @@ export function TaskForm({ onAdd }: { onAdd: (task: TaskDraft) => void }) {
         <label className="field" htmlFor="task-title">
           Назва <span>*</span>
           <input
+            autoFocus={!!task}
             id="task-title"
             value={title}
             onChange={(event) => {
@@ -126,8 +135,17 @@ export function TaskForm({ onAdd }: { onAdd: (task: TaskDraft) => void }) {
           className="button button--primary task-form__submit"
           type="submit"
         >
-          <Plus size={18} /> Додати завдання
+          <Plus size={18} /> {task ? "Зберегти зміни" : "Додати завдання"}
         </button>
+        {task && (
+          <button
+            type="button"
+            className="button task-form__cancel"
+            onClick={cancelEditing}
+          >
+            Скасувати редагування
+          </button>
+        )}
         <p className="task-form__hint">
           Маленький план — початок великих змін.
         </p>

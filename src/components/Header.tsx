@@ -1,3 +1,4 @@
+import "./Header.scss";
 import { BookOpen, Moon, Sun } from "lucide-react";
 export function Header({
   dark,
