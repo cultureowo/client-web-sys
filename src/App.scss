@@ -141,6 +141,14 @@
 }
 
 .tasks {
+  &__operation {
+    color: var(--muted);
+    font-size: 13px;
+    line-height: 1.6;
+  }
+  &__operation--error {
+    color: #d4677d;
+  }
   &__actions {
     display: flex;
     flex-wrap: wrap;

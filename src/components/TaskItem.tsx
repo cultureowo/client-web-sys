@@ -1,12 +1,20 @@
 import type { CSSProperties } from "react";
-import { Trash2, Check, Flag, Pencil } from "lucide-react";
+import { Trash2, Check, Flag, Pencil, Eye } from "lucide-react";
 import { priorityLabels } from "../types/task";
 import type { Task } from "../types/task";
 import { useTaskContext } from "../hooks/useTaskContext";
 import "./TaskItem.scss";
 export function TaskItem({ task }: { task: Task }) {
-  const { toggleTask, requestDelete, startEditing, pending } = useTaskContext();
-  const deleting = pending?.ids.includes(task.id) ?? false;
+  const {
+    toggleTask,
+    requestDelete,
+    startEditing,
+    pending,
+    mutation,
+    selectTask,
+  } = useTaskContext();
+  const deleting = pending?.tasks.some((item) => item.id === task.id) ?? false;
+  const disabled = !!pending || !!mutation;
   return (
     <li
       className={`task${task.completed ? " task--completed" : ""}${deleting ? " task--pending" : ""}`}
@@ -15,12 +23,15 @@ export function TaskItem({ task }: { task: Task }) {
         className="task__checkbox"
         type="checkbox"
         checked={task.completed}
-        disabled={deleting}
+        disabled={disabled}
         onChange={() => toggleTask(task.id)}
         aria-label={`Виконано: ${task.title}`}
       />
       <div className="task__content">
         <h3>{task.title}</h3>
+        {task.origin === "session" && (
+          <p className="task__session">Створено в поточній сесії</p>
+        )}
         {deleting && (
           <p className="task__pending" role="status">
             Буде видалено…
@@ -52,7 +63,16 @@ export function TaskItem({ task }: { task: Task }) {
       <div className="task__actions">
         <button
           className="task__edit"
-          disabled={deleting}
+          disabled={disabled}
+          onClick={() => selectTask(task.id)}
+          aria-label={`Деталі: ${task.title}`}
+          title="Деталі завдання"
+        >
+          <Eye size={17} />
+        </button>
+        <button
+          className="task__edit"
+          disabled={disabled}
           onClick={() => startEditing(task.id)}
           aria-label={`Редагувати: ${task.title}`}
           title="Редагувати завдання"
@@ -60,7 +80,7 @@ export function TaskItem({ task }: { task: Task }) {
           <Pencil size={17} />
         </button>
         <button
-          disabled={!!pending}
+          disabled={disabled}
           className="task__delete"
           onClick={() => requestDelete(task.id)}
           aria-label={`Видалити: ${task.title}`}

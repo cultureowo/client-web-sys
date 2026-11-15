@@ -8,6 +8,9 @@ import { TaskFilters } from "./components/TaskFilters";
 import { TaskList } from "./components/TaskList";
 import { useTaskContext } from "./hooks/useTaskContext";
 import { Toast } from "./components/Toast";
+import { Pagination } from "./components/Pagination";
+import { TaskDetails } from "./components/TaskDetails";
+import { ApiNotice } from "./components/ApiNotice";
 import "./styles/app.scss";
 
 export default function App() {
@@ -21,7 +24,15 @@ export default function App() {
     resetTasks,
     pending,
     storageError,
+    mutation,
+    mutationError,
+    status,
+    reload,
+    selectedId,
+    selectTask,
+    sessionChanges,
   } = useTaskContext();
+  const selectedTask = tasks.find((task) => task.id === selectedId);
 
   return (
     <div className={`planner${dark ? " planner--dark" : ""}`}>
@@ -49,6 +60,7 @@ export default function App() {
             <Plus size={19} /> Нове завдання
           </a>
         </section>
+        <ApiNotice />
         <TaskStats />
         <div className="planner__workspace">
           <aside>
@@ -73,20 +85,51 @@ export default function App() {
               <div className="tasks__actions">
                 <button
                   className="button button--quiet"
-                  disabled={!completed || !!pending}
+                  disabled={
+                    !completed ||
+                    !!pending ||
+                    !!mutation ||
+                    status !== "success"
+                  }
                   onClick={clearCompleted}
                 >
-                  Очистити виконані
+                  Очистити виконані на сторінці
                 </button>
-                <button className="button button--quiet" onClick={resetTasks}>
-                  Скинути дані
+                <button
+                  className="button button--quiet"
+                  disabled={!!mutation}
+                  onClick={resetTasks}
+                >
+                  Скинути зміни
+                </button>
+                <button
+                  className="button button--quiet"
+                  disabled={!!pending || !!mutation || status === "loading"}
+                  onClick={reload}
+                >
+                  Оновити список
                 </button>
               </div>
             </div>
             <TaskFilters />
+            {mutation && (
+              <p className="tasks__operation" role="status" aria-live="polite">
+                {mutation}
+              </p>
+            )}
+            {mutationError && (
+              <p
+                className="tasks__operation tasks__operation--error"
+                role="alert"
+              >
+                {mutationError} Дані форми збережено; повторіть дію.
+              </p>
+            )}
             <TaskList />
+            <Pagination />
             <p className="tasks__result">
-              Показано {visibleTasks.length} із {tasks.length} завдань
+              Показано {visibleTasks.length} із {tasks.length} завдань поточної
+              сторінки
             </p>
           </section>
         </div>
@@ -97,6 +140,14 @@ export default function App() {
         )}
       </main>
       <Toast />
+      {selectedTask && (
+        <TaskDetails
+          key={selectedTask.id}
+          seed={selectedTask}
+          override={sessionChanges[selectedTask.id] ?? undefined}
+          onClose={() => selectTask(null)}
+        />
+      )}
       <footer className="planner__footer">
         <span>Study Planner ✦ Навчайся у своєму ритмі</span>
         <span>Кожен крок має значення.</span>

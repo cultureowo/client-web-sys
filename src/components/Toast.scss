@@ -9,6 +9,7 @@
   pointer-events: none;
 }
 .toast {
+  flex-wrap: wrap;
   pointer-events: auto;
   position: relative;
   display: flex;

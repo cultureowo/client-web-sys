@@ -1,4 +1,17 @@
 .task-form {
+  &__fields {
+    border: 0;
+    margin: 0;
+    padding: 0;
+    min-width: 0;
+  }
+  &__legend {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip-path: inset(50%);
+  }
   &__cancel {
     width: 100%;
     margin-top: 10px;

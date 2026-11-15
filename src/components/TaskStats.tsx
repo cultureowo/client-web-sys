@@ -12,7 +12,7 @@ export function TaskStats() {
           <Layers size={21} />
         </span>
         <div>
-          <p>Усього завдань</p>
+          <p>На цій сторінці</p>
           <strong>{total}</strong>
         </div>
       </article>

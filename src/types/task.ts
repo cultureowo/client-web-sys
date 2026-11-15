@@ -12,7 +12,10 @@ export interface Task {
   origin?: "api" | "session";
   userId?: number;
 }
-export type TaskDraft = Pick<Task, "title" | "description" | "priority" | "category" | "categoryColor">;
+export type TaskDraft = Pick<
+  Task,
+  "title" | "description" | "priority" | "category" | "categoryColor"
+>;
 export const priorityLabels: Record<Priority, string> = {
   low: "Низький",
   medium: "Середній",

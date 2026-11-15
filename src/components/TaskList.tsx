@@ -2,8 +2,19 @@ import { BookOpenCheck } from "lucide-react";
 import { TaskItem } from "./TaskItem";
 import { useTaskContext } from "../hooks/useTaskContext";
 import "./TaskList.scss";
+import { RequestState } from "./RequestState";
 export function TaskList() {
-  const { visibleTasks: tasks, tasks: allTasks } = useTaskContext();
+  const {
+    visibleTasks: tasks,
+    tasks: allTasks,
+    status,
+    loadError,
+    reload,
+  } = useTaskContext();
+  if (status === "loading")
+    return <RequestState loading message="Завантаження завдань…" />;
+  if (status === "error")
+    return <RequestState message={loadError} onRetry={reload} />;
   const total = allTasks.length;
   if (!tasks.length)
     return (
@@ -20,7 +31,7 @@ export function TaskList() {
       </div>
     );
   return (
-    <ul className="task-list">
+    <ul className="task-list" aria-label="Список завдань">
       {tasks.map((task) => (
         <TaskItem key={task.id} task={task} />
       ))}

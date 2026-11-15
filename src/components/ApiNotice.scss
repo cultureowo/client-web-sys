@@ -1,0 +1,16 @@
+.api-notice {
+  margin: 0 0 24px;
+  padding: 16px 20px;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  color: var(--muted);
+  background: var(--surface);
+  font-size: 12px;
+  line-height: 1.7;
+  & strong {
+    color: var(--text);
+  }
+  & p {
+    margin: 6px 0 0;
+  }
+}
