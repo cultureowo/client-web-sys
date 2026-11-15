@@ -148,7 +148,12 @@ export function TaskForm({ task }: { task?: Task }) {
             className="button button--primary task-form__submit"
             type="submit"
           >
-            <Plus size={18} /> {task ? "Зберегти зміни" : "Додати завдання"}
+            <Plus size={18} />{" "}
+            {mutation
+              ? "Обробка запиту…"
+              : task
+                ? "Зберегти зміни"
+                : "Додати завдання"}
           </button>
           {task && (
             <button

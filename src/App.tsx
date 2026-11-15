@@ -122,7 +122,7 @@ export default function App() {
                 className="tasks__operation tasks__operation--error"
                 role="alert"
               >
-                {mutationError} Дані форми збережено; повторіть дію.
+                {mutationError} Повторіть дію, коли сервіс буде доступний.
               </p>
             )}
             <TaskList />
