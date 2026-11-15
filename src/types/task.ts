@@ -9,8 +9,10 @@ export interface Task {
   priority: Priority;
   category: string;
   categoryColor: string;
+  origin?: "api" | "session";
+  userId?: number;
 }
-export type TaskDraft = Omit<Task, "id" | "completed">;
+export type TaskDraft = Pick<Task, "title" | "description" | "priority" | "category" | "categoryColor">;
 export const priorityLabels: Record<Priority, string> = {
   low: "Низький",
   medium: "Середній",
