@@ -190,6 +190,13 @@
   }
 }
 @media (max-width: 480px) {
+  .tasks__heading {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+  .tasks__actions {
+    justify-content: flex-start;
+  }
   .tasks__heading h2 {
     font-size: 21px;
   }
