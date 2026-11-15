@@ -1,65 +1,79 @@
-import type { Task, TaskDraft } from "../types/task";
-
-export interface PendingDeletion {
-  token: string;
-  ids: string[];
-  startedAt: number;
-}
+import type { Task } from "../types/task.ts";
+import type { TaskPage } from "../repositories/taskRepository.ts";
+import type { RequestStatus } from "../types/api.ts";
 
 export interface TaskState {
-  tasks: Task[];
-  pending: PendingDeletion | null;
+  pageTasks: Task[];
+  total: number;
+  page: number;
+  status: RequestStatus;
+  error: string;
+  // Only successful session mutations, not another copy of the fetched dataset.
+  changes: Record<string, Task | null>;
 }
 
+export const initialTaskState: TaskState = {
+  pageTasks: [],
+  total: 0,
+  page: 1,
+  status: "loading",
+  error: "",
+  changes: {},
+};
+
 export type TaskAction =
-  | { type: "add"; task: Task }
-  | { type: "toggle"; id: string }
-  | { type: "update"; id: string; draft: TaskDraft }
-  | { type: "requestDelete"; pending: PendingDeletion }
-  | { type: "clearCompleted"; pending: PendingDeletion }
-  | { type: "confirmDelete"; token: string }
-  | { type: "undoDelete" }
-  | { type: "reset"; tasks: Task[] };
+  | { type: "load"; page: number }
+  | { type: "loaded"; page: number; result: TaskPage }
+  | { type: "failed"; page: number; error: string }
+  | { type: "upsert"; task: Task }
+  | { type: "deleted"; id: string }
+  | { type: "reset" };
 
 export function taskReducer(state: TaskState, action: TaskAction): TaskState {
   switch (action.type) {
-    case "add":
-      return { ...state, tasks: [action.task, ...state.tasks] };
-    case "toggle":
+    case "load":
       return {
         ...state,
-        tasks: state.tasks.map((task) =>
-          task.id === action.id && !state.pending?.ids.includes(task.id)
-            ? { ...task, completed: !task.completed }
-            : task,
-        ),
+        page: action.page,
+        pageTasks: [],
+        status: "loading",
+        error: "",
       };
-    case "update":
+    case "loaded":
+      if (state.page !== action.page) return state;
       return {
         ...state,
-        tasks: state.tasks.map((task) =>
-          task.id === action.id && !state.pending?.ids.includes(task.id)
-            ? { ...task, ...action.draft }
-            : task,
-        ),
+        pageTasks: action.result.tasks,
+        total: action.result.total,
+        status: "success",
+        error: "",
       };
-    case "requestDelete":
-    case "clearCompleted":
-      return state.pending ? state : { ...state, pending: action.pending };
-    case "confirmDelete": {
-      if (state.pending?.token !== action.token) return state;
-      const ids = state.pending.ids;
+    case "failed":
+      if (state.page !== action.page) return state;
+      return { ...state, status: "error", error: action.error };
+    case "upsert":
       return {
-        tasks: state.tasks.filter((task) => !ids.includes(task.id)),
-        pending: null,
+        ...state,
+        changes: { ...state.changes, [action.task.id]: action.task },
       };
-    }
-    case "undoDelete":
-      return { ...state, pending: null };
+    case "deleted":
+      return { ...state, changes: { ...state.changes, [action.id]: null } };
     case "reset":
-      return {
-        tasks: action.tasks.map((task) => ({ ...task })),
-        pending: null,
-      };
+      return { ...initialTaskState, changes: {} };
   }
+}
+
+export function selectPageTasks(state: TaskState): Task[] {
+  if (state.status !== "success") return [];
+  const created =
+    state.page === 1
+      ? Object.values(state.changes)
+          .filter((task): task is Task => task?.origin === "session")
+          .reverse()
+      : [];
+  const remote = state.pageTasks.flatMap((task) => {
+    const changed = state.changes[task.id];
+    return changed === null ? [] : [changed ?? task];
+  });
+  return [...created, ...remote];
 }

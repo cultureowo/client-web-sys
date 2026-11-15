@@ -41,7 +41,7 @@ export function TaskFilters() {
             type="search"
             value={search}
             onChange={(event) => onSearch(event.target.value)}
-            placeholder="Знайти завдання…"
+            placeholder="Пошук на цій сторінці…"
             aria-label="Пошук за назвою"
           />
         </label>

@@ -1,0 +1,56 @@
+.task-details {
+  width: min(560px, calc(100vw - 32px));
+  max-height: calc(100dvh - 48px);
+  overflow: auto;
+  padding: 24px;
+  border: 1px solid var(--line);
+  border-radius: 16px;
+  color: var(--text);
+  background: var(--surface);
+  &::backdrop {
+    background: #11162999;
+  }
+  &__heading {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 16px;
+  }
+  &__heading h2 {
+    margin: 0;
+    font-size: 20px;
+  }
+  &__close {
+    background: var(--soft);
+    color: var(--text);
+    border: 0;
+    border-radius: 8px;
+    padding: 8px;
+    display: flex;
+  }
+  &__title {
+    overflow-wrap: anywhere;
+    line-height: 1.6;
+  }
+  &__fields {
+    display: grid;
+    grid-template-columns: 95px minmax(0, 1fr);
+    gap: 12px;
+    font-size: 14px;
+  }
+  &__fields dt {
+    color: var(--muted);
+  }
+  &__fields dd {
+    margin: 0;
+    overflow-wrap: anywhere;
+    white-space: pre-wrap;
+  }
+  &__note {
+    color: var(--muted);
+    font-size: 12px;
+    line-height: 1.7;
+    border-top: 1px solid var(--line);
+    padding-top: 16px;
+  }
+}
