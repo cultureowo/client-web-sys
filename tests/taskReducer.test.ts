@@ -1,107 +1,112 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { taskReducer } from "../src/reducers/taskReducer.ts";
+import {
+  initialTaskState,
+  selectPageTasks,
+  taskReducer,
+} from "../src/reducers/taskReducer.ts";
 import type { TaskState } from "../src/reducers/taskReducer.ts";
 import type { Task } from "../src/types/task.ts";
 
 const task: Task = {
   id: "1",
   title: "React",
-  description: "Practice",
+  description: "",
   completed: false,
-  priority: "high",
-  category: "React",
+  priority: "medium",
+  category: "Загальне",
   categoryColor: "#6284f5",
+  origin: "api",
 };
-const second: Task = { ...task, id: "2", completed: true };
+const page = { tasks: [task], total: 25, skip: 0, limit: 10 };
 function initial(): TaskState {
-  return { tasks: [{ ...task }, { ...second }], pending: null };
+  return taskReducer(initialTaskState, {
+    type: "loaded",
+    page: 1,
+    result: page,
+  });
 }
-const pending = { token: "delete-1", ids: ["1"], startedAt: 1000 };
 
-test("add, toggle and update preserve the original state and task identity", () => {
+test("loading, error and retry transitions reject responses for other pages", () => {
+  const loading = taskReducer(initial(), { type: "load", page: 2 });
+  assert.equal(loading.status, "loading");
+  assert.deepEqual(selectPageTasks(loading), []);
+  assert.equal(
+    taskReducer(loading, { type: "loaded", page: 1, result: page }),
+    loading,
+  );
+  assert.equal(
+    taskReducer(loading, { type: "failed", page: 1, error: "stale" }),
+    loading,
+  );
+  const failed = taskReducer(loading, {
+    type: "failed",
+    page: 2,
+    error: "offline",
+  });
+  assert.equal(failed.error, "offline");
+  const retried = taskReducer(failed, { type: "load", page: 2 });
+  assert.equal(retried.error, "");
+  assert.equal(
+    taskReducer(retried, {
+      type: "loaded",
+      page: 2,
+      result: { ...page, tasks: [] },
+    }).status,
+    "success",
+  );
+});
+
+test("confirmed mutations are immutable and survive page reloading", () => {
   const state = initial();
   const snapshot = structuredClone(state);
-  const toggled = taskReducer(state, { type: "toggle", id: "1" });
-  assert.equal(toggled.tasks[0].completed, true);
-  assert.equal(toggled.tasks[1], state.tasks[1]);
-  const updated = taskReducer(state, {
-    type: "update",
-    id: "1",
-    draft: {
-      title: "Effects",
-      description: "Updated",
-      category: "Hooks",
-      priority: "low",
-      categoryColor: "#24a88b",
-    },
+  const updated = {
+    ...task,
+    title: "Effects",
+    description: "Metadata",
+    completed: true,
+  };
+  const changed = taskReducer(state, { type: "upsert", task: updated });
+  const loadedAgain = taskReducer(changed, {
+    type: "loaded",
+    page: 1,
+    result: page,
   });
-  assert.equal(updated.tasks[0].title, "Effects");
-  assert.equal(updated.tasks[0].id, "1");
-  assert.equal(updated.tasks[0].completed, false);
-  assert.equal(
-    taskReducer(state, { type: "add", task: { ...task, id: "3" } }).tasks
-      .length,
-    3,
-  );
+  assert.deepEqual(selectPageTasks(loadedAgain), [updated]);
   assert.deepEqual(state, snapshot);
+  assert.equal(state.pageTasks[0], task);
 });
 
-test("request keeps task present; undo restores normal state; stale timers are ignored", () => {
-  const state = initial();
-  const requested = taskReducer(state, { type: "requestDelete", pending });
-  assert.equal(requested.tasks.length, 2);
-  assert.deepEqual(requested.pending, pending);
-  assert.equal(
-    taskReducer(requested, { type: "toggle", id: "1" }).tasks[0].completed,
-    false,
-  );
-  assert.equal(
-    taskReducer(requested, { type: "confirmDelete", token: "stale" }),
-    requested,
-  );
-  const undone = taskReducer(requested, { type: "undoDelete" });
-  assert.equal(undone.pending, null);
-  assert.equal(
-    taskReducer(undone, { type: "confirmDelete", token: pending.token }),
-    undone,
-  );
+test("deleted remote tasks remain hidden after navigation and refresh", () => {
+  const deleted = taskReducer(initial(), { type: "deleted", id: "1" });
   assert.deepEqual(
-    taskReducer(requested, { type: "confirmDelete", token: pending.token })
-      .tasks,
-    [second],
+    selectPageTasks(
+      taskReducer(deleted, { type: "loaded", page: 1, result: page }),
+    ),
+    [],
   );
 });
 
-test("only one deletion batch is active and clearCompleted has the same undo lifecycle", () => {
-  const state = initial();
-  const batch = { ...pending, ids: ["2"] };
-  const requested = taskReducer(state, {
-    type: "clearCompleted",
-    pending: batch,
+test("created tasks appear on page one with unique session identity and can be deleted", () => {
+  const created = { ...task, id: "session:unique", origin: "session" as const };
+  const state = taskReducer(initial(), { type: "upsert", task: created });
+  assert.deepEqual(selectPageTasks(state), [created, task]);
+  const next = taskReducer(taskReducer(state, { type: "load", page: 2 }), {
+    type: "loaded",
+    page: 2,
+    result: { ...page, tasks: [] },
   });
-  assert.equal(
-    taskReducer(requested, { type: "requestDelete", pending }),
-    requested,
-  );
+  assert.deepEqual(selectPageTasks(next), []);
   assert.deepEqual(
-    taskReducer(requested, { type: "undoDelete" }).tasks,
-    state.tasks,
-  );
-  assert.deepEqual(
-    taskReducer(requested, { type: "confirmDelete", token: batch.token }).tasks,
+    selectPageTasks(taskReducer(state, { type: "deleted", id: created.id })),
     [task],
   );
 });
 
-test("reset cancels pending deletion and copies initial tasks", () => {
-  const state = taskReducer(initial(), { type: "requestDelete", pending });
-  const reset = taskReducer(state, { type: "reset", tasks: [task] });
-  assert.equal(reset.pending, null);
-  assert.deepEqual(reset.tasks, [task]);
-  assert.notEqual(reset.tasks[0], task);
-  assert.equal(
-    taskReducer(reset, { type: "confirmDelete", token: pending.token }),
-    reset,
-  );
+test("reset discards session changes and starts loading instead of using localStorage", () => {
+  const state = taskReducer(initial(), {
+    type: "upsert",
+    task: { ...task, completed: true },
+  });
+  assert.deepEqual(taskReducer(state, { type: "reset" }), initialTaskState);
 });
