@@ -1,6 +1,6 @@
-# Study Planner · Lab 10
+# Study Planner · Lab 11
 
-Built with Vite, React 19, and TypeScript. REST API: DummyJSON Todos. Styling uses SCSS with BEM conventions, with styles located alongside their components. Requires **Node.js 22.22 or later**; tested with version 24.13.0.
+Built with Vite, React 19, React Router 8, TypeScript, React Hook Form, and Zod. The application uses DummyJSON for task data and authentication, with SCSS and BEM for styling. Requires **Node.js 22.22 or later**.
 
 ## Getting Started
 
@@ -10,20 +10,31 @@ Install dependencies:
 npm ci
 ```
 
-Create `.env` from `.env.example`. In PowerShell:
-
-```powershell
-Copy-Item .env.example .env
-npm run dev
-```
-
-Configuration:
+Create a local `.env` file with the public API URL.
 
 ```dotenv
 VITE_API_URL=https://dummyjson.com
 ```
 
-Restart Vite after changing `.env`. If PowerShell blocks script execution, use `npm.cmd` instead of `npm`. The `.env` file is excluded from Git; `.env.example` contains only the public API URL. Variables prefixed with `VITE_` are exposed to the client and must not contain secrets.
+Start the development server.
+
+```sh
+npm run dev
+```
+
+Restart Vite after changing the local environment configuration. Git ignores all `.env` files. Variables prefixed with `VITE_` are exposed to the browser.
+
+## Routes
+
+| Route | Access | Purpose |
+| --- | --- | --- |
+| `/` | Public | Redirects to the task list |
+| `/tasks` | Public | Task list with server pagination and a URL-based status filter |
+| `/tasks/:taskId` | Public | Task details, including available author and creation metadata |
+| `/login` | Public | Sign-in form |
+| `/profile` | Authenticated | Account information and sign-out |
+
+Declarative Mode is the default. Set `VITE_ROUTER_MODE=data` in the local environment to use Data Mode. Both modes share the same pages and layout. Deployments must serve `index.html` for client-side routes.
 
 ## Validation
 
@@ -39,10 +50,13 @@ The 16 tests use the built-in Node.js test runner without an additional testing 
 ## Features
 
 - Task list retrieval through GET with server-side pagination: 10 tasks per page, previous/next controls, and a page indicator.
-- Task details retrieved through a separate GET request by ID, with loading, error, and retry states. Details open using the eye icon and can be closed with Escape.
+- Task details retrieved through a separate GET request by ID, with loading, error, and retry states.
+- Authentication via DummyJSON and an in-memory session. Login and task forms use React Hook Form with Zod validation.
+- Shared modal for creating and editing tasks, with keyboard focus, Escape, and submission state.
+- Authenticated task mutations send an Authorization bearer token through the HTTP client.
 - Task creation through POST, editing and completion updates through PATCH, and deletion through DELETE after confirmation.
 - Loading indicators, retry controls for failed requests, success toasts, and empty states.
-- AbortController support for list and detail requests, with cleanup when switching pages or closing details.
+- AbortController support for list and detail requests, with cleanup when switching pages or leaving details.
 - Forms reset only after a successful submission; entered values are preserved after an error.
 - Deletion confirmation followed by a five-second undo window before the HTTP DELETE request. Failed deletion requests leave the task in the interface.
 - Bulk deletion of completed tasks on the current page, with confirmation and undo support.
@@ -58,7 +72,9 @@ POST requests may return duplicate IDs. Created records therefore receive unique
 
 Pagination uses the server's `total` value. Statistics are calculated from the current page, including session changes. Deleted records are not automatically replaced with records from the next page, so a page may contain fewer than 10 tasks.
 
-Only the **active filter** is stored in localStorage. The legacy task storage key from Lab 9 is ignored. API data is neither loaded from nor written to localStorage as a second source of truth.
+The active status filter is stored in the URL as `status=active` or `status=completed`. Task data and the access token stay in memory and are cleared on page reload.
+
+DummyJSON provides a user ID for existing tasks. The app records the author name and creation time locally for tasks created during the session.
 
 ## Architecture
 
@@ -72,18 +88,19 @@ src/
   types/task.ts                     # domain Task, TaskDraft
   hooks/useTasks.ts                 # task list state, async lifecycle, cancellation
   hooks/useDebouncedValue.ts         # search debounce
-  hooks/useLocalStorage.ts           # client/UI state persistence
+  auth/session.ts                   # login, profile request, session lifecycle
+  context/AuthProvider.tsx          # current account and authentication actions
+  layouts/AppLayout.tsx             # shared header, content and notifications
+  pages/                            # tasks, task details, login and profile
+  schemas/forms.ts                  # Zod schemas for login and task forms
   context/TaskProvider.tsx           # UI state, actions, toasts, and undo
   reducers/taskReducer.ts            # loading state and mutation results
-  components/TaskDetails.tsx         # local async state for task details
+  components/TaskFormDialog.tsx      # shared create and edit form
   components/Pagination.tsx
   components/RequestState.tsx
-  components/TaskForm.tsx
   components/...                    # additional components with their own SCSS
-  App.tsx                           # UI composition
+  App.tsx                           # router configuration and profile guards
 tests/
 ```
 
-The reducer stores the current page response and a journal of successful session changes. The visible task list is derived from these values without maintaining an independent copy of the tasks. Context exposes this state and its operations without creating another task state. Task details are loaded into local state within `TaskDetails` rather than stored in the global Context.
-
-Materials from previous labs are retained as historical documentation: [Lab 9](docs/lab-09.md) and [Lab 8](docs/lab-08.md). They describe earlier versions rather than the current REST architecture.
+The reducer stores the current page response and successful session changes. Task Context exposes the derived task list and its operations. Task Details loads the selected record into local page state. Auth Context exposes the account and authentication actions, while the mutation handler checks the session before calling the repository.

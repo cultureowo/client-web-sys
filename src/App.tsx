@@ -1,157 +1,84 @@
-import "./App.scss";
-import { useState } from "react";
-import { Plus, Sparkles } from "lucide-react";
-import { Header } from "./components/Header";
-import { TaskForm } from "./components/TaskForm";
-import { TaskStats } from "./components/TaskStats";
-import { TaskFilters } from "./components/TaskFilters";
-import { TaskList } from "./components/TaskList";
-import { useTaskContext } from "./hooks/useTaskContext";
-import { Toast } from "./components/Toast";
-import { Pagination } from "./components/Pagination";
-import { TaskDetails } from "./components/TaskDetails";
-import { ApiNotice } from "./components/ApiNotice";
-import "./styles/app.scss";
+import {
+  BrowserRouter,
+  Navigate,
+  Route,
+  RouterProvider,
+  Routes,
+  createBrowserRouter,
+  redirect,
+  useLocation,
+  Outlet,
+  Link,
+} from "react-router";
+import { AppLayout } from "./layouts/AppLayout";
+import { TasksPage } from "./pages/TasksPage";
+import { TaskDetailsPage } from "./pages/TaskDetailsPage";
+import { LoginPage } from "./pages/LoginPage";
+import { ProfilePage } from "./pages/ProfilePage";
+import { useAuth } from "./context/AuthContext";
+import { getSession } from "./auth/session";
+import { loginPath } from "./routes/authNavigation";
+
+function RequireAuth() {
+  const { isAuthenticated } = useAuth();
+  const location = useLocation();
+  return isAuthenticated ? (
+    <Outlet />
+  ) : (
+    <Navigate replace to={loginPath(location.pathname + location.search)} />
+  );
+}
+
+function NotFound() {
+  return (
+    <section className="account-page">
+      <h1>Сторінку не знайдено</h1>
+      <Link to="/tasks">До завдань</Link>
+    </section>
+  );
+}
+
+const dataRouter =
+  import.meta.env.VITE_ROUTER_MODE === "data"
+    ? createBrowserRouter([
+        {
+          Component: AppLayout,
+          children: [
+            { index: true, loader: () => redirect("/tasks") },
+            { path: "tasks", Component: TasksPage },
+            { path: "tasks/:taskId", Component: TaskDetailsPage },
+            { path: "login", Component: LoginPage },
+            {
+              path: "profile",
+              Component: ProfilePage,
+              loader: ({ request }) => {
+                if (getSession()) return null;
+                const url = new URL(request.url);
+                return redirect(loginPath(url.pathname + url.search));
+              },
+            },
+            { path: "*", Component: NotFound },
+          ],
+        },
+      ])
+    : null;
 
 export default function App() {
-  const [dark, setDark] = useState(false);
-  const {
-    tasks,
-    completed,
-    visibleTasks,
-    editingTask,
-    clearCompleted,
-    resetTasks,
-    pending,
-    storageError,
-    mutation,
-    mutationError,
-    status,
-    reload,
-    selectedId,
-    selectTask,
-    sessionChanges,
-  } = useTaskContext();
-  const selectedTask = tasks.find((task) => task.id === selectedId);
-
+  if (dataRouter) return <RouterProvider router={dataRouter} />;
   return (
-    <div className={`planner${dark ? " planner--dark" : ""}`}>
-      <Header dark={dark} onThemeChange={() => setDark((value) => !value)} />
-      <main className="planner__main">
-        <section className="intro">
-          <div>
-            <p className="intro__eyebrow">
-              <Sparkles size={15} /> ТВІЙ ПРОСТІР ДЛЯ НАВЧАННЯ
-            </p>
-            <h1>
-              Великі цілі.
-              <br />
-              <span>Маленькі кроки.</span>
-            </h1>
-            <p className="intro__description">
-              Звільни думки від списків. Плануй, навчайся та помічай свій
-              прогрес.
-            </p>
-          </div>
-          <a
-            className="button button--primary intro__action"
-            href="#task-title"
-          >
-            <Plus size={19} /> Нове завдання
-          </a>
-        </section>
-        <ApiNotice />
-        <TaskStats />
-        <div className="planner__workspace">
-          <aside>
-            <TaskForm key={editingTask?.id ?? "new"} task={editingTask} />
-            <div className="note">
-              <Sparkles size={20} />
-              <p>
-                Не потрібно встигнути все.
-                <br />
-                <strong>Достатньо почати з одного.</strong>
-              </p>
-            </div>
-          </aside>
-          <section className="tasks" aria-labelledby="tasks-heading">
-            <div className="tasks__heading">
-              <div>
-                <p className="section-label">КРОК ЗА КРОКОМ</p>
-                <h2 id="tasks-heading">
-                  Мої завдання <span>{tasks.length}</span>
-                </h2>
-              </div>
-              <div className="tasks__actions">
-                <button
-                  className="button button--quiet"
-                  disabled={
-                    !completed ||
-                    !!pending ||
-                    !!mutation ||
-                    status !== "success"
-                  }
-                  onClick={clearCompleted}
-                >
-                  Очистити виконані на сторінці
-                </button>
-                <button
-                  className="button button--quiet"
-                  disabled={!!mutation}
-                  onClick={resetTasks}
-                >
-                  Скинути зміни
-                </button>
-                <button
-                  className="button button--quiet"
-                  disabled={!!pending || !!mutation || status === "loading"}
-                  onClick={reload}
-                >
-                  Оновити список
-                </button>
-              </div>
-            </div>
-            <TaskFilters />
-            {mutation && (
-              <p className="tasks__operation" role="status" aria-live="polite">
-                {mutation}
-              </p>
-            )}
-            {mutationError && (
-              <p
-                className="tasks__operation tasks__operation--error"
-                role="alert"
-              >
-                {mutationError} Повторіть дію, коли сервіс буде доступний.
-              </p>
-            )}
-            <TaskList />
-            <Pagination />
-            <p className="tasks__result">
-              Показано {visibleTasks.length} із {tasks.length} завдань поточної
-              сторінки
-            </p>
-          </section>
-        </div>
-        {storageError && (
-          <p className="planner__notice" role="alert">
-            {storageError}
-          </p>
-        )}
-      </main>
-      <Toast />
-      {selectedTask && (
-        <TaskDetails
-          key={selectedTask.id}
-          seed={selectedTask}
-          override={sessionChanges[selectedTask.id] ?? undefined}
-          onClose={() => selectTask(null)}
-        />
-      )}
-      <footer className="planner__footer">
-        <span>Study Planner ✦ Навчайся у своєму ритмі</span>
-        <span>Кожен крок має значення.</span>
-      </footer>
-    </div>
+    <BrowserRouter>
+      <Routes>
+        <Route element={<AppLayout />}>
+          <Route index element={<Navigate replace to="/tasks" />} />
+          <Route path="tasks" element={<TasksPage />} />
+          <Route path="tasks/:taskId" element={<TaskDetailsPage />} />
+          <Route path="login" element={<LoginPage />} />
+          <Route element={<RequireAuth />}>
+            <Route path="profile" element={<ProfilePage />} />
+          </Route>
+          <Route path="*" element={<NotFound />} />
+        </Route>
+      </Routes>
+    </BrowserRouter>
   );
 }

@@ -90,14 +90,20 @@ export function createTaskRepository(request: Request = httpClient) {
         await request<ApiTodo>(`/todos/${encodeURIComponent(id)}`, { signal }),
       );
     },
-    async create(draft: TaskDraft, signal?: AbortSignal): Promise<Task> {
+    async create(
+      draft: TaskDraft,
+      signal?: AbortSignal,
+      accessToken?: string,
+      author?: { id: number; username: string },
+    ): Promise<Task> {
       const todo = await request<ApiTodo>("/todos/add", {
         method: "POST",
         signal,
+        accessToken,
         body: JSON.stringify({
           todo: draft.title,
           completed: false,
-          userId: 1,
+          userId: author?.id ?? 1,
         }),
       });
       const mapped = toTask(todo);
@@ -106,12 +112,15 @@ export function createTaskRepository(request: Request = httpClient) {
         ...draft,
         id: `session:${crypto.randomUUID()}`,
         origin: "session",
+        createdBy: author?.username,
+        createdAt: new Date().toISOString(),
       };
     },
     async update(
       task: Task,
       changes: Partial<TaskDraft> & { completed?: boolean },
       signal?: AbortSignal,
+      accessToken?: string,
     ): Promise<Task> {
       signal?.throwIfAborted();
       if (task.origin === "session") return { ...task, ...changes };
@@ -124,6 +133,7 @@ export function createTaskRepository(request: Request = httpClient) {
         {
           method: "PATCH",
           signal,
+          accessToken,
           body: JSON.stringify(body),
         },
       );
@@ -137,12 +147,17 @@ export function createTaskRepository(request: Request = httpClient) {
         completed: mapped.completed,
       };
     },
-    async delete(task: Task, signal?: AbortSignal): Promise<void> {
+    async delete(
+      task: Task,
+      signal?: AbortSignal,
+      accessToken?: string,
+    ): Promise<void> {
       signal?.throwIfAborted();
       if (task.origin === "session") return;
       await request<unknown>(`/todos/${encodeURIComponent(task.id)}`, {
         method: "DELETE",
         signal,
+        accessToken,
       });
     },
   };

@@ -2,7 +2,9 @@ import { useCallback, useEffect, useState } from "react";
 import type { ReactNode } from "react";
 import { TaskContext } from "./TaskContext";
 import type { PendingDeletion, ToastMessage } from "./TaskContext";
-import { useLocalStorage } from "../hooks/useLocalStorage";
+import { useSearchParams } from "react-router";
+import { getSession } from "../auth/session";
+import { useAuth } from "./AuthContext";
 import { useTasks } from "../hooks/useTasks";
 import { useDebouncedValue } from "../hooks/useDebouncedValue";
 import type { Task, TaskDraft, StatusFilter, SortOrder } from "../types/task";
@@ -21,17 +23,25 @@ export function TaskProvider({ children }: { children: ReactNode }) {
     [],
   );
   const data = useTasks(notify);
-  const [filter, setFilter, storageError] = useLocalStorage<StatusFilter>(
-    "study-planner.filter.v1",
-    "all",
-    isFilter,
-  );
+  const [params, setParams] = useSearchParams();
+  const statusParam = params.get("status");
+  const filter = isFilter(statusParam) ? statusParam : "all";
+  function setFilter(value: StatusFilter) {
+    setParams((previous) => {
+      const next = new URLSearchParams(previous);
+      if (value === "all") next.delete("status");
+      else next.set("status", value);
+      return next;
+    });
+  }
   const [search, setSearch] = useState("");
   const debouncedSearch = useDebouncedValue(search, 300);
   const [sort, setSort] = useState<SortOrder>("default");
-  const [editingId, setEditingId] = useState<string | null>(null);
-  const [selectedId, setSelectedId] = useState<string | null>(null);
-  const [pending, setPending] = useState<PendingDeletion | null>(null);
+  const { session } = useAuth();
+  const [deletion, setPending] = useState<
+    (PendingDeletion & { owner: typeof session }) | null
+  >(null);
+  const pending = deletion?.owner === session ? deletion : null;
   const remove = data.remove;
 
   useEffect(() => {
@@ -39,7 +49,7 @@ export function TaskProvider({ children }: { children: ReactNode }) {
     const timer = window.setTimeout(
       () => {
         setPending(null);
-        void remove(pending.tasks);
+        if (pending.owner === getSession()) void remove(pending.tasks);
       },
       Math.max(0, pending.startedAt + DELETE_DELAY - Date.now()),
     );
@@ -78,7 +88,7 @@ export function TaskProvider({ children }: { children: ReactNode }) {
     );
 
   function findEditable(id: string) {
-    if (data.mutation || pending) return undefined;
+    if (!getSession() || data.mutation || pending) return undefined;
     return data.tasks.find((task) => task.id === id);
   }
   function validDraft(draft: TaskDraft) {
@@ -87,15 +97,15 @@ export function TaskProvider({ children }: { children: ReactNode }) {
     return false;
   }
   function scheduleDeletion(tasks: Task[]) {
-    if (data.mutation || pending || !tasks.length) return;
+    const owner = getSession();
+    if (!owner || data.mutation || pending || !tasks.length) return;
     setPending({
+      owner,
       tasks,
       token: crypto.randomUUID(),
       phase: "confirm",
       startedAt: 0,
     });
-    setEditingId(null);
-    setSelectedId(null);
   }
 
   return (
@@ -111,13 +121,6 @@ export function TaskProvider({ children }: { children: ReactNode }) {
         setSearch,
         sort,
         setSort,
-        editingTask: data.tasks.find((task) => task.id === editingId),
-        startEditing(id) {
-          if (findEditable(id)) setEditingId(id);
-        },
-        cancelEditing() {
-          if (!data.mutation) setEditingId(null);
-        },
         async addTask(draft) {
           if (pending || !validDraft(draft)) return false;
           const success = await data.create(draft);
@@ -127,26 +130,22 @@ export function TaskProvider({ children }: { children: ReactNode }) {
           }
           return success;
         },
-        async updateTask(id, draft) {
-          const task = findEditable(id);
-          if (!task || !validDraft(draft)) return false;
-          const success = await data.update(task, draft);
-          if (success) setEditingId(null);
-          return success;
+        async updateTask(task, draft) {
+          if (pending || !validDraft(draft)) return false;
+          return data.update(task, draft);
         },
         async toggleTask(id) {
           const task = findEditable(id);
           if (task) await data.update(task, { completed: !task.completed });
         },
-        requestDelete(id) {
-          const task = findEditable(id);
-          if (task) scheduleDeletion([task]);
+        requestDelete(task) {
+          scheduleDeletion([task]);
         },
         clearCompleted() {
           scheduleDeletion(data.tasks.filter((task) => task.completed));
         },
         confirmDelete() {
-          if (pending?.phase === "confirm")
+          if (pending?.phase === "confirm" && pending.owner === getSession())
             setPending({ ...pending, phase: "waiting", startedAt: Date.now() });
         },
         undoDelete() {
@@ -156,8 +155,6 @@ export function TaskProvider({ children }: { children: ReactNode }) {
         resetTasks() {
           if (data.mutation) return;
           setPending(null);
-          setEditingId(null);
-          setSelectedId(null);
           setFilter("all");
           setSearch("");
           setSort("default");
@@ -166,7 +163,6 @@ export function TaskProvider({ children }: { children: ReactNode }) {
         toast,
         dismissToast: () => setToast(null),
         reportError: (message) => notify(message, "error"),
-        storageError,
         status: data.status,
         loadError: data.error,
         mutation: data.mutation,
@@ -179,12 +175,8 @@ export function TaskProvider({ children }: { children: ReactNode }) {
         serverTotal: data.serverTotal,
         setPage(value) {
           if (pending || data.mutation) return;
-          setEditingId(null);
-          setSelectedId(null);
           data.setPage(value);
         },
-        selectedId,
-        selectTask: setSelectedId,
         sessionChanges: data.sessionChanges,
       }}
     >

@@ -25,13 +25,10 @@ export interface TaskContextValue {
   setSearch: (value: string) => void;
   sort: SortOrder;
   setSort: (value: SortOrder) => void;
-  editingTask: Task | undefined;
-  startEditing: (id: string) => void;
-  cancelEditing: () => void;
   addTask: (draft: TaskDraft) => Promise<boolean>;
-  updateTask: (id: string, draft: TaskDraft) => Promise<boolean>;
+  updateTask: (task: Task, draft: TaskDraft) => Promise<boolean>;
   toggleTask: (id: string) => Promise<void>;
-  requestDelete: (id: string) => void;
+  requestDelete: (task: Task) => void;
   confirmDelete: () => void;
   undoDelete: () => void;
   clearCompleted: () => void;
@@ -39,7 +36,6 @@ export interface TaskContextValue {
   toast: ToastMessage | null;
   dismissToast: () => void;
   reportError: (message: string) => void;
-  storageError: string;
   status: RequestStatus;
   loadError: string;
   mutation: string | null;
@@ -49,8 +45,6 @@ export interface TaskContextValue {
   pageSize: number;
   serverTotal: number;
   setPage: (value: number) => void;
-  selectedId: string | null;
-  selectTask: (id: string | null) => void;
   sessionChanges: Record<string, Task | null>;
 }
 

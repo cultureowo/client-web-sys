@@ -1,0 +1,57 @@
+.form {
+  &__fields {
+    border: 0;
+    margin: 0;
+    padding: 0;
+    min-width: 0;
+  }
+
+  &__error {
+    color: #d44869;
+    font-size: 12px;
+    margin-top: -8px;
+  }
+}
+
+.field {
+  display: block;
+  font-size: 12px;
+  margin-bottom: 19px;
+  font-weight: 500;
+  > span {
+    color: #9380ed;
+  }
+  .field__optional {
+    font-size: 10px;
+    color: var(--muted);
+    font-weight: 400;
+    margin-left: 5px;
+  }
+  input,
+  textarea,
+  select {
+    display: block;
+    margin-top: 8px;
+    padding: 11px 12px;
+    width: 100%;
+    min-width: 0;
+    background: var(--surface);
+    border: 1px solid var(--line);
+    border-radius: 8px;
+    color: var(--text);
+    font-size: 12px;
+    line-height: 1.6;
+  }
+  textarea {
+    resize: vertical;
+    min-height: 90px;
+  }
+  input::placeholder,
+  textarea::placeholder {
+    color: var(--muted);
+    opacity: 0.8;
+  }
+  input[aria-invalid="true"] {
+    border-color: #d44869;
+  }
+}

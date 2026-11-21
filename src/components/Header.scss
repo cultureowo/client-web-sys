@@ -1,7 +1,21 @@
 .header {
+  &__nav {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 14px;
+    font-size: 14px;
+  }
+  &__nav a {
+    color: var(--text);
+  }
+  &__nav a[aria-current="page"] {
+    font-weight: 700;
+  }
   background: var(--surface);
   border-bottom: 1px solid var(--line);
   &__inner {
+    flex-wrap: wrap;
     max-width: 1200px;
     margin: auto;
     padding: 21px 32px;

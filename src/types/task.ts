@@ -11,6 +11,9 @@ export interface Task {
   categoryColor: string;
   origin?: "api" | "session";
   userId?: number;
+  // Client-owned metadata. DummyJSON does not supply these timestamps or names.
+  createdAt?: string;
+  createdBy?: string;
 }
 export type TaskDraft = Pick<
   Task,

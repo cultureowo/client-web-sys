@@ -3,16 +3,12 @@ import { Trash2, Check, Flag, Pencil, Eye } from "lucide-react";
 import { priorityLabels } from "../types/task";
 import type { Task } from "../types/task";
 import { useTaskContext } from "../hooks/useTaskContext";
+import { Link } from "react-router";
+import { useRequireLogin } from "../routes/authNavigation";
 import "./TaskItem.scss";
 export function TaskItem({ task }: { task: Task }) {
-  const {
-    toggleTask,
-    requestDelete,
-    startEditing,
-    pending,
-    mutation,
-    selectTask,
-  } = useTaskContext();
+  const { toggleTask, requestDelete, pending, mutation } = useTaskContext();
+  const requireLogin = useRequireLogin();
   const deleting = pending?.tasks.some((item) => item.id === task.id) ?? false;
   const disabled = !!pending || !!mutation;
   return (
@@ -24,7 +20,9 @@ export function TaskItem({ task }: { task: Task }) {
         type="checkbox"
         checked={task.completed}
         disabled={disabled}
-        onChange={() => toggleTask(task.id)}
+        onChange={() => {
+          if (requireLogin()) void toggleTask(task.id);
+        }}
         aria-label={`Виконано: ${task.title}`}
       />
       <div className="task__content">
@@ -61,28 +59,28 @@ export function TaskItem({ task }: { task: Task }) {
         </div>
       </div>
       <div className="task__actions">
-        <button
+        <Link
           className="task__edit"
-          disabled={disabled}
-          onClick={() => selectTask(task.id)}
+          to={`/tasks/${encodeURIComponent(task.id)}`}
           aria-label={`Деталі: ${task.title}`}
           title="Деталі завдання"
         >
           <Eye size={17} />
-        </button>
-        <button
+        </Link>
+        <Link
           className="task__edit"
-          disabled={disabled}
-          onClick={() => startEditing(task.id)}
+          to={`/tasks/${encodeURIComponent(task.id)}?edit=1`}
           aria-label={`Редагувати: ${task.title}`}
           title="Редагувати завдання"
         >
           <Pencil size={17} />
-        </button>
+        </Link>
         <button
           disabled={disabled}
           className="task__delete"
-          onClick={() => requestDelete(task.id)}
+          onClick={() => {
+            if (requireLogin()) requestDelete(task);
+          }}
           aria-label={`Видалити: ${task.title}`}
           title="Видалити завдання"
         >

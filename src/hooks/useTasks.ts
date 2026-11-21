@@ -7,6 +7,7 @@ import {
   taskReducer,
 } from "../reducers/taskReducer";
 import type { Task, TaskDraft } from "../types/task";
+import { getSession } from "../auth/session";
 
 const PAGE_SIZE = 10;
 
@@ -50,16 +51,25 @@ export function useTasks(
   const runMutation = useCallback(
     async (
       label: string,
-      work: (signal: AbortSignal) => Promise<void>,
+      work: (
+        signal: AbortSignal,
+        session: NonNullable<ReturnType<typeof getSession>>,
+      ) => Promise<void>,
     ): Promise<boolean> => {
       if (operation.current) return false;
+      const session = getSession();
+      if (!session) {
+        notify("Спочатку увійдіть у свій акаунт.", "error");
+        return false;
+      }
       const controller = new AbortController();
       operation.current = controller;
       setMutation(label);
       setMutationError("");
       try {
-        await work(controller.signal);
-        return !controller.signal.aborted;
+        const signal = AbortSignal.any([controller.signal, session.signal]);
+        await work(signal, session);
+        return !signal.aborted;
       } catch (error) {
         if (!controller.signal.aborted && !isAbortError(error)) {
           const message = errorMessage(error);
@@ -79,9 +89,9 @@ export function useTasks(
 
   const remove = useCallback(
     (items: Task[]) =>
-      runMutation("Видалення завдань…", async (signal) => {
+      runMutation("Видалення завдань…", async (signal, session) => {
         for (const task of items) {
-          await taskRepository.delete(task, signal);
+          await taskRepository.delete(task, signal, session.accessToken);
           if (signal.aborted) return;
           dispatch({ type: "deleted", id: task.id });
         }
@@ -121,8 +131,13 @@ export function useTasks(
       setMutationError("");
     },
     create(draft: TaskDraft) {
-      return runMutation("Створення завдання…", async (signal) => {
-        const task = await taskRepository.create(draft, signal);
+      return runMutation("Створення завдання…", async (signal, session) => {
+        const task = await taskRepository.create(
+          draft,
+          signal,
+          session.accessToken,
+          session.user,
+        );
         if (signal.aborted) return;
         dispatch({ type: "upsert", task });
         setPage(1);
@@ -130,8 +145,13 @@ export function useTasks(
       });
     },
     update(task: Task, changes: Partial<TaskDraft> & { completed?: boolean }) {
-      return runMutation("Збереження змін…", async (signal) => {
-        const updated = await taskRepository.update(task, changes, signal);
+      return runMutation("Збереження змін…", async (signal, session) => {
+        const updated = await taskRepository.update(
+          task,
+          changes,
+          signal,
+          session.accessToken,
+        );
         if (signal.aborted) return;
         dispatch({ type: "upsert", task: updated });
         notify("Зміни завдання збережено в поточній сесії.");

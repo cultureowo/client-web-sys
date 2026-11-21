@@ -21,11 +21,11 @@ export function errorMessage(error: unknown): string {
 export function createHttpClient(baseUrl: string) {
   return async function request<T>(
     path: string,
-    options: RequestInit = {},
+    options: RequestInit & { accessToken?: string } = {},
   ): Promise<T> {
     if (!baseUrl)
       throw new ApiError(
-        "Не налаштовано VITE_API_URL. Створіть .env за прикладом .env.example і перезапустіть Vite.",
+        "Не налаштовано VITE_API_URL. Задайте адресу API та перезапустіть Vite.",
       );
     let url: URL;
     try {
@@ -37,17 +37,21 @@ export function createHttpClient(baseUrl: string) {
     } catch {
       throw new ApiError("Некоректне значення VITE_API_URL.");
     }
-    const headers = new Headers(options.headers);
+    const { accessToken, ...init } = options;
+    const headers = new Headers(init.headers);
+    if (accessToken) headers.set("Authorization", `Bearer ${accessToken}`);
     headers.set("Accept", "application/json");
     if (options.body) headers.set("Content-Type", "application/json");
-    const response = await fetch(url, { ...options, headers });
+    const response = await fetch(url, { ...init, headers });
     if (!response.ok) {
       const message =
-        response.status === 404
-          ? "Завдання не знайдено на сервері."
-          : response.status >= 500
-            ? "Сервер тимчасово недоступний. Спробуйте ще раз."
-            : "API відхилив запит. Спробуйте ще раз.";
+        response.status === 401
+          ? "Не вдалося підтвердити особу. Перевірте дані входу або увійдіть повторно."
+          : response.status === 404
+            ? "Завдання не знайдено на сервері."
+            : response.status >= 500
+              ? "Сервер тимчасово недоступний. Спробуйте ще раз."
+              : "API відхилив запит. Спробуйте ще раз.";
       throw new ApiError(
         `${message} (HTTP ${response.status})`,
         response.status,
