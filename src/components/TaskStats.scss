@@ -1,0 +1,111 @@
+.stats {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr) 1.65fr;
+  gap: 16px;
+  &__card {
+    display: flex;
+    align-items: center;
+    gap: 15px;
+    padding: 22px;
+    border: 1px solid var(--line);
+    border-radius: 15px;
+    background: var(--surface);
+  }
+  &__card p {
+    color: var(--muted);
+    font-size: 12px;
+    margin: 0 0 7px;
+  }
+  &__card strong {
+    font-size: 27px;
+    line-height: 1;
+    font-weight: 650;
+  }
+  &__icon {
+    display: grid;
+    place-items: center;
+    flex-shrink: 0;
+    width: 43px;
+    height: 43px;
+    border-radius: 12px;
+  }
+  &__icon--blue {
+    background: #6086fc15;
+    color: #6284f5;
+  }
+  &__icon--purple {
+    background: #a37cf015;
+    color: #a37cf0;
+  }
+  &__icon--green {
+    background: #24a88b15;
+    color: #24a88b;
+  }
+  &__progress {
+    width: 100%;
+  }
+  &__progress p {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+  }
+  &__progress strong {
+    color: #8c7be8;
+    font-size: 21px;
+  }
+  &__progress progress {
+    display: block;
+    width: 100%;
+    height: 6px;
+    border: 0;
+    border-radius: 8px;
+    background: var(--soft);
+    overflow: hidden;
+  }
+  &__progress progress::-webkit-progress-bar {
+    background: var(--soft);
+  }
+  &__progress progress::-webkit-progress-value {
+    background: var(--gradient);
+    border-radius: 8px;
+  }
+  &__progress progress::-moz-progress-bar {
+    background: var(--gradient);
+  }
+  &__progress small {
+    display: block;
+    color: var(--muted);
+    font-size: 9px;
+    margin-top: 8px;
+  }
+}
+@media (max-width: 1000px) {
+  .stats {
+    grid-template-columns: repeat(3, 1fr);
+  }
+  .stats__card--progress {
+    grid-column: 1 / -1;
+  }
+}
+@media (max-width: 760px) {
+  .stats {
+    gap: 9px;
+  }
+  .stats__card {
+    padding: 14px 10px;
+    gap: 8px;
+  }
+  .stats__icon {
+    width: 32px;
+    height: 32px;
+  }
+  .stats__card p {
+    font-size: 10px;
+  }
+  .stats__card strong {
+    font-size: 23px;
+  }
+  .stats__progress strong {
+    font-size: 20px;
+  }
+}
